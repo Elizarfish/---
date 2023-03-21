@@ -1,0 +1,151 @@
+#!/bin/bash
+
+## https://github.com/0xAkashsky/sub-scout/blob/main/sub-scout.sh
+
+# step 0: Функция обновления списка DNS-серверов
+RefreshResolvers(){
+    echo "Enter number of threads:" # Выводится сообщение на экран
+    read numThreads # Чтение количества потоков для работы
+    echo "start refresh resolvers list. Wait few minutes" # Выводится сообщение на экран
+    dnsvalidator -tL https://raw.githubusercontent.com/BonJarber/fresh-resolvers/main/resolvers.txt -threads $numThreads --silent > resolvers.txt # Запуск скрипта для обновления списка DNS-серверов, используя заданное количество потоков
+}
+
+# step 0: Функция создания имени файла
+CreateFilename(){
+  file=$(echo $1 | cut -f 1 -d '.'); # Извлечение имени домена из переданного параметра
+  fileName=$(touch $file.txt); # Создание файла с именем, полученным из предыдущего шага
+  echo $file.txt # Вывод имени файла на экран
+}
+
+# Функция поиска поддоменов
+# step 1
+FindDomain(){
+
+    # TODO:
+    # Manual entering path to config files for gathering information
+
+    # Использование инструментов для поиска поддоменов и запись результатов в соответствующие файлы
+    amass enum -passive -d $1 -config ~/config.ini -o amass.result;
+    subfinder -d $1 -all --silent -o subfinder.result;
+    chaos -d $1 -silent -o chaos.result;
+    findomain -t $1 -q -u findomain.result;
+    github-subdomains -d $1 -o github-subdomains.result;
+    assetfinder --subs-only $1 > assetfinder.result;
+    crobat -s $1 -u >> corbat.result;
+    
+}
+
+# Создание имени файла для записи результатов
+fileName=$(CreateFilename $1);
+
+# Шаг 1.1: Фильтрация результатов
+FiltredResult(){
+    echo "Created file with name $fileName"
+    # Объединение результатов из нескольких файлов, удаление дубликатов и запись в файл
+    cat github-subdomains.result subfinder.result chaos.result amass.result findomain.result corbat.result assetfinder.result | sort -u -o $fileName;
+    # Удаление временных файлов
+    rm  *.result
+}
+
+# Шаг 2: Проверка наличия Wildcard DNS
+checkWildCard(){
+    echo "Check for wildcard DNS:";
+    # Выполнение запросов к несуществующим доменам, чтобы определить наличие Wildcard DNS
+    dig @1.1.1.1 A,CNAME {test321123,testingforwildcard,plsdontgimmearesult}.$1 +short | wc -l;
+    echo "If result gather than zero, subdomains has wildcard";
+}
+
+# step 3
+ResolveFindings(){
+
+    # Закомментированные строки относятся к проверке наличия wildcard DNS
+
+    #echo "Check for wildcard DNS:";
+    #dig @1.1.1.1 A,CNAME {test321123,testingforwildcard,plsdontgimmearesult}.$1 +short | wc -l;
+    #echo "If result gather than zero, subdomains has wildcard";
+
+    # Запрос пользователя о том, нужно ли удалить wildcard
+
+    echo "Resolve result without removing wildcard [y/N]?"
+    read wildcardAnswer
+
+    # Если пользователь выбрал "y" или "Y", то выполняется следующий блок
+
+    if [ "$wildcardAnswer" != "${wildcardAnswer#[Yy]}" ] ; then
+
+        # Разрешение DNS без удаления wildcard
+
+        dnsx -l $fileName -json -o $fileName.dnsx;
+
+        # Извлечение IP-адресов из вывода dnsx и сохранение их в файле
+
+        cat $fileName.dnsx | jq -r '.a[]' | anew $fileName.ips;
+
+        # Извлечение имен хостов из вывода dnsx и сохранение их в файле
+
+        cat $fileName.dnsx | jq -r '.host' | sort -u -o $fileName.resolved;
+    fi
+    
+    # Если пользователь выбрал "n" или "N", то выполняется следующий блок
+
+    if [ "$wildcardAnswer" != "${wildcardAnswer#[Nn]}" ] ; then
+
+        # Разрешение DNS с удалением wildcard с помощью shuffledns
+
+        shuffledns -d $1 -list $fileName -r resolvers.txt -o $fileName.resolved -nC;
+
+        # Разрешение DNS с использованием dnsx
+
+        dnsx -l $fileName.resolved -json -o $fileName.dnsx;
+
+        # Извлечение IP-адресов из вывода dnsx и сохранение их в файле
+
+        cat $fileName.dnsx | jq -r '.a[]' | anew $fileName.ips;
+
+        # Извлечение имен хостов из вывода dnsx и сохранение их в файле
+
+        cat $fileName.dnsx | jq -r '.host' | sort -u -o $fileName.resolved;
+    fi
+    
+    echo "Scan all IPs with nmap (Maybe slowly) [y/N]?"  # Запрос на сканирование всех IP-адресов с помощью nmap
+    read nmapChoosen  # Считываем ответ пользователя
+
+    if [ "$nmapChoosen" != "${nmapChoosen#[Yy]}" ] ; then  # Если ответ пользователя не начинается с Y или y, то пропускаем этот блок кода
+        file=$(echo $1 | cut -f 1 -d '.');  # Получаем имя файла без расширения
+        sudo nmap -vvv -Pn -n -sS -p 21-23,25,53,111,137,139,445,80,443,3389,5900,8080,8443 --min-rtt-timeout 275ms --max-rtt-timeout 350ms --max-retries 0 --max-scan-delay 0 --min-hostgroup 128 -iL $fileName.ips -oG Tuned.gnmap;  # Сканируем IP-адреса с помощью nmap и сохраняем результат в формате Grepable
+        grep "Status: Up" Tuned.gnmap | cut -d " " -f2 | anew UpHosts.txt;  # Отфильтровываем только работающие IP-адреса и сохраняем их в файле UpHosts.txt
+        sudo nmap -vvv -Pn -sS -sT -p- --min-rtt-timeout 275ms --max-rtt-timeout 350ms --max-retries 1 --max-scan-delay 0 --min-hostgroup 128 -iL UpHosts.txt -oX $fileName.nmap;  # Сканируем все порты работающих IP-адресов с помощью nmap и сохраняем результат в формате XML
+        rm -f Tuned.gnmap UpHosts.txt  # Удаляем временные файлы
+    fi
+
+    smap -iL $fileName.ips -oX $fileName.nmap;  # Генерируем карту подсети с помощью smap и сохраняем ее в формате XML
+
+    tew -x $fileName.nmap -dnsx $fileName.dnsx --vhost | httpx -fc 503,502,501 -nc -sc -cl -ip -tech-detect -fr -o $fileName.httpx;  # Производим сканирование веб-серверов с помощью tew и httpx, используя данные из карты подсети, DNS-запросов и виртуальных хостов, сохраняем результат в файле fileName.httpx
+
+    egrep -oRh 'https?://[^ ]+' $fileName.httpx | sed 's/]//' | sed -e 's#/$##' | sort -u -o $fileName.scope;  # Извлекаем из файла httpx все найденные URL-адреса и сохраняем их в отдельном файле (fileName.scope)
+
+}
+
+# Запрашиваем у пользователя, хочет ли он обновить список резолверов
+echo "Do u wanna update resolvers list [y/N]?"
+read anserRefreshResolvers
+if [ "$anserRefreshResolvers" != "${anserRefreshResolvers#[Yy]}" ] ; then
+    RefreshResolvers; # Вызываем функцию обновления списка резолверов
+fi
+
+# Запрашиваем у пользователя, хочет ли он найти домены из открытых источников
+echo "Do u wanna find domains from open sourceses [y/N]?"
+read answerSubdomains
+
+if [ "$answerSubdomains" != "${answerSubdomains#[Yy]}" ] ; then
+    FindDomain $1; # Вызываем функцию поиска доменов из открытых источников
+    FiltredResult; # Вызываем функцию фильтрации результатов
+fi
+
+# Запрашиваем у пользователя, хочет ли он провести резолвинг найденных доменов
+echo "Do u wanna resolve gathering domains [y/N]?"
+read answerResolve
+
+if [ "$answerResolve" != "${answerResolve#[Yy]}" ] ; then
+    ResolveAllResult $1; # Вызываем функцию резолвинга найденных доменов
+fi
